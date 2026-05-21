@@ -1,9 +1,9 @@
-Feature extraction code used by `bert_source.ipynb` / `gpt2_source.ipynb`
+Feature extraction code used by `bert_attention_pipeline.ipynb` / `gpt2_attention_pipeline.ipynb`
 to build the feature matrix pickle (per-sentence attention features).
 
 Layout
 ------
-attention_app/
+attention/
     models.py                        (ModelManager: tokenizer + BERT/GPT-2 loader)
     metrics.py                       (GAM, flow change)
     head_specialization.py           (head metrics, linguistic tags)
