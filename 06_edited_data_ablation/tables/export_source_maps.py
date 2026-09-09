@@ -10,7 +10,7 @@ Produces two artifacts:
   2. ``test_source_per_seed/test_source_seed_<N>.csv`` (N = 1..5) — the same
      four columns but restricted to each seed's main test split. The rows
      line up one-for-one with ``preds_<variant>_seed_<N>.csv`` so the
-     professor's paired permutation tests / no-Gemini test analyses can be
+     paired permutation tests / no-Gemini test analyses can be
      joined by ``instance_id`` without losing rows.
 
 The per-seed test indices replicate ``pair_aware_split`` from the Colab

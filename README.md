@@ -66,7 +66,7 @@ The notebooks were written inside a parent project and expect to be launched fro
 
 ```
 <project root>/
-├── attention_app/            # copy of feature_extraction_code/attention_app/
+├── attention/                # copy of feature_extraction_code/attention/
 ├── dataset/
 │   └── bias_sentences_v9.json   # copy of datasets/bias_sentences_v9.json
 └── <this repo>/
@@ -74,9 +74,9 @@ The notebooks were written inside a parent project and expect to be launched fro
 
 Concretely, before running anything:
 
-1. Copy `feature_extraction_code/attention_app/` (or `attention/`, see the note below) to your project root, or add it to `sys.path`.
+1. Copy `feature_extraction_code/attention/` to your project root, or add it to `sys.path`. Every notebook imports it as `attention` (`from attention.models import ModelManager`).
 2. Copy `datasets/bias_sentences_v9.json` to `<root>/dataset/bias_sentences_v9.json`.
-3. **Edit the hard-coded paths.** A few cells still contain absolute Windows paths (`%cd "C:\Users\...\attention-atlas"`, and one `open(r'C:\...\unseen_bias_test.json')` in `05_bias_classifiers/gpt2_bias_classifier.ipynb`). Point these at your own root.
+3. **Edit the hard-coded paths.** A few cells still contain absolute Windows paths (`%cd "C:\Users\...\project"`, and one `open(r'C:\...\unseen_bias_test.json')` in `05_bias_classifiers/gpt2_bias_classifier.ipynb`). Point these at your own root.
 
 ### 3. Suggested run order
 
@@ -124,19 +124,6 @@ The `human_audit_tools/` folder contains:
 | `gpt2_attention_pipeline.ipynb` | **Appendix A** features + the GPT-2 Attn rows of **Tables 4, 5, 11**; the GPT-2 row of **Tab 32** (INLP). |
 
 Both notebooks depend on the Python modules in [`feature_extraction_code/`](#feature_extraction_code).
-
----
-
-### `02_feature_extraction/` (import-name twin of the above)
-
-`bert_extract_features.ipynb` and `gpt2_extract_features.ipynb` are the **same pipeline** as `02_attention_pipeline/`, differing only in which copy of the package they import:
-
-| Folder | Imports |
-|--------|---------|
-| `02_attention_pipeline/` | `from attention.models import ModelManager` |
-| `02_feature_extraction/` | `from attention_app.models import ModelManager` |
-
-Run **one** of the two, whichever matches the package name you placed on your path (`feature_extraction_code/attention/` and `feature_extraction_code/attention_app/` are byte-identical copies). Cite `02_attention_pipeline/` as the canonical version; the table map below refers to it.
 
 ---
 
@@ -201,8 +188,7 @@ Python modules imported by the notebooks above. **Required dependency**: without
 
 ```
 feature_extraction_code/
-├── attention/         ─┐  byte-identical copies; pick the one whose
-└── attention_app/     ─┘  import name your notebook variant uses
+└── attention/                             # imported as `attention` by every notebook
     ├── models.py                          # ModelManager (tokenizer + BERT/GPT-2 loader)
     ├── metrics.py                         # GAM, flow change
     ├── head_specialization.py             # head metrics, linguistic tags
@@ -271,7 +257,7 @@ Exact Gemini prompts used in the audit and counterfactual pipeline.
 
 | Table | Caption | Produced by |
 |:-----:|---------|-------------|
-| **9** (`tab:attn-features`) | Attention-derived feature groups per sentence | Documentation only; counts come from the implementation in `feature_extraction_code/attention_app/bias/feature_extraction_notebooks.py`, exercised by `02_attention_pipeline/{bert,gpt2}_attention_pipeline.ipynb` |
+| **9** (`tab:attn-features`) | Attention-derived feature groups per sentence | Documentation only; counts come from the implementation in `feature_extraction_code/attention/bias/feature_extraction_notebooks.py`, exercised by `02_attention_pipeline/{bert,gpt2}_attention_pipeline.ipynb` |
 
 ### Appendix B: Detailed LOSO Results
 
@@ -353,7 +339,7 @@ Until then, please cite the work as *to appear* at AACL-IJCNLP 2026.
 
 ## Notes and known gaps
 
-- **Absolute paths.** A handful of cells still hard-code `C:\Users\...\attention-atlas`. Rewrite them for your environment before running (see [Quick start](#quick-start)).
-- **Duplicated code.** `feature_extraction_code/attention/` and `attention_app/` are identical, as are `02_attention_pipeline/` and `02_feature_extraction/`. They exist only to match two import names; consolidating them is safe.
+- **Absolute paths.** A handful of cells still hard-code `C:\Users\...\project`. Rewrite them for your environment before running (see [Quick start](#quick-start)).
+- **`attention_app/` in saved paths.** Some notebooks read and write model artifacts under `<root>/attention_app/bias/models/`. That is an output folder in the parent project, not the Python package: the package to put on your path is `feature_extraction_code/attention/`.
 - **App F analysis script** is not in the repository, only its inputs. See `06_edited_data_ablation/`.
 - **`04_text_baselines/source_only_baseline.ipynb`** reads the older `dataset/v2/*.csv` merges, which are not shipped here; it is kept as provenance for the confounding diagnostic, not as a v9 result.
