@@ -1,0 +1,5 @@
+,PairAcc,PairAcc,DirAcc,DirAcc,MeanGap,MeanGap,n_pairs
+,mean,std,mean,std,mean,std,
+stereo_antistereo,,,,,,,
+antistereo,0.0339,0.0077,0.2817,0.0472,-0.0341,0.0159,218
+stereo,0.0924,0.0082,0.6583,0.0194,0.061,0.0076,1290

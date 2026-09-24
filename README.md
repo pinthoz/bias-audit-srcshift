@@ -2,9 +2,37 @@
 
 **A Source-Aware Benchmark and Evaluation Protocol**
 
+**Ana Pinto** and **Álvaro Figueira**
+Department of Computer Science, Faculty of Sciences, University of Porto
+
 > 🎉 **Accepted at AACL-IJCNLP 2026: Main Conference** (Hengqin, China).
+> **Citation to be added** once the proceedings are published (see [Citation](#citation)).
 
 This repository is the reproduction pack for the paper: every notebook, prompt, dataset snapshot and Python module needed to regenerate the numbers we report. Each artifact is mapped to a specific table or appendix in the [Table → notebook map](#table--notebook-map).
+
+**Licensing.** The code is released under the MIT License ([`LICENSE`](LICENSE)). The audited dataset and the per-instance predictions are released separately, **for research use only**, under the terms in [`DATA_LICENSE.md`](DATA_LICENSE.md). The one exception is `07_external_evaluations/crows_pairs/`, which is derived from CrowS-Pairs and therefore stays under **CC BY-SA 4.0**.
+
+---
+
+## Repository structure
+
+```
+bias-audit-srcshift/
+├── 01_data_audit_counterfactuals/   audit + counterfactual generation, human-audit tools
+├── 02_attention_pipeline/           main pipeline: attention-derived features, LOSO, calibration, INLP
+├── 03_source_domain_diagnosis/      source-recoverability diagnostics
+├── 04_text_baselines/               fine-tuned BERT / GPT-2 baselines, source-only baseline
+├── 05_bias_classifiers/             single-seed classifiers + TF-IDF lexical baseline
+├── 06_edited_data_ablation/         edited-data ablation (variants A-D), 20 per-instance prediction files
+├── 07_external_evaluations/         held-out counterfactual pairs, CrowS-Pairs audit and transfer
+├── datasets/                        corpus snapshots; bias_sentences_v9.json is the release
+├── feature_extraction_code/         the `attention` package imported by the notebooks
+├── prompts/                         the four prompts of Appendix B (audit, repair, counterfactual generation) and the counterfactual acceptance rules
+├── LICENSE                          MIT, code only
+└── DATA_LICENSE.md                  research-use-only terms for the dataset
+```
+
+Each folder is documented in [Directory layout](#directory-layout) below.
 
 ---
 
@@ -17,6 +45,28 @@ This repository is the reproduction pack for the paper: every notebook, prompt, 
 | **Evaluation protocol** | Pair-aware splits, source-only majority baselines, Leave-One-Source-Out (LOSO), linear residualization and INLP |
 | **Model families** | TF-IDF + LogReg · fine-tuned BERT / GPT-2 · attention-derived features (3 238 dims) over BERT / GPT-2 |
 | **External checks** | Held-out counterfactual discrimination (983 pairs) and zero-shot CrowS-Pairs transfer |
+
+---
+
+## Artifacts referenced in the paper
+
+| Artifact | Where it lives | Status |
+|---|---|---|
+| **Audited dataset** with role and audit provenance | [`datasets/bias_sentences_v9.json`](datasets/bias_sentences_v9.json) | present (10 304 instances; `role`, `edit_type`, `pair_id`, `original_id`, `edit_spans`) |
+| **Per-instance predictions**, 4 ablation variants × 5 seeds (20 files) | [`06_edited_data_ablation/predictions/`](06_edited_data_ablation/predictions/) | present |
+| **CrowS-Pairs audit verdicts** (Prompt 1 on all 3 016 CrowS-Pairs sentences) and transfer outputs | [`07_external_evaluations/crows_pairs/`](07_external_evaluations/crows_pairs/) | present (CC BY-SA 4.0, see below) |
+| **Evaluation and statistical-test code** | [`02_attention_pipeline/`](02_attention_pipeline/), [`07_external_evaluations/`](07_external_evaluations/), [`06_edited_data_ablation/tables/`](06_edited_data_ablation/tables/) | present: evaluation notebooks, the CrowS-Pairs audit script, and `06_edited_data_ablation/tables/ablation_stats.py` for the App G paired tests (a re-implementation; see [Notes](#notes-and-known-gaps)) |
+
+The per-instance predictions join one-to-one, by `instance_id`, with the per-seed
+test-split source maps in
+[`06_edited_data_ablation/tables/`](06_edited_data_ablation/tables/)
+(`v9_source_map.csv`, `test_source_seed_<N>.csv`); those are the inputs of the App G
+analysis.
+
+> ⚖️ The CrowS-Pairs files are derived from CrowS-Pairs (Nangia et al., 2020), which is
+> licensed CC BY-SA 4.0. They are therefore released under **CC BY-SA 4.0**, not under
+> the research-only terms of [`DATA_LICENSE.md`](DATA_LICENSE.md). Details in
+> [`07_external_evaluations/crows_pairs/README.md`](07_external_evaluations/crows_pairs/README.md).
 
 ---
 
@@ -83,7 +133,7 @@ Concretely, before running anything:
 | Step | Notebook | Produces |
 |-----:|----------|----------|
 | 1 | `01_data_audit_counterfactuals/gemini_audit.ipynb` → `generate_counterfactuals.ipynb` | dataset v9 (only needed if rebuilding the corpus from scratch) |
-| 2 | `03_source_domain_diagnosis/bert_source_diagnosis.ipynb` | source-composition diagnostics (Tab 2) |
+| 2 | `03_source_domain_diagnosis/bert_source_diagnosis.ipynb` | source-domain diagnostics and the held-out pairs of Tab 18 |
 | 3 | `02_attention_pipeline/bert_attention_pipeline.ipynb` | the headline attention-derived results and most appendices |
 | 4 | `04_text_baselines/` + `05_bias_classifiers/` | fine-tuned and lexical baseline rows |
 | 5 | `06_edited_data_ablation/` then `06_edited_data_ablation/tables/` | the ablation and its statistical analysis |
@@ -105,6 +155,7 @@ The dataset pipeline that produces **v9**.
 | `generate_counterfactuals.ipynb` | **Section 2.2 + Appendix B**: counterfactual pair generation with **Prompts 3 and 4**, plus the double-ACCEPT audit filter. The same notebook is re-run with `BIASED_CORPUS_PATH = gus_only.json` to produce the GUS counterfactuals. |
 | `claude_label_audit.ipynb` | **Appendix C**: independent **Claude Sonnet 4.6** re-audit of the same 300 stratified instances (κ = 0.842 against Gemini). |
 | `human_audit_tools/` | **Appendix C**: scripts used to sample and annotate the 300 stratified human-audit instances. |
+| `human_audit_data/` | **Appendices C and K**: the 300-instance human audit with Prompt 1 verdicts (`human_audit_sample_300.csv`), the Claude re-audit of the same instances (`claude_audit_300_results_4.csv`, read by `claude_label_audit.ipynb`; set its `DATA_DIR` to this folder), the 200 never-flagged instances verified in Appendix K (`unflagged_sample_200.csv`), and two scripts: `human_vs_prompt1_matrix.py` (Tab 10) and `unflagged_sample_check.py` (Appendix K: 2 label errors, 3.1 % upper bound). |
 
 The `human_audit_tools/` folder contains:
 
@@ -120,8 +171,8 @@ The `human_audit_tools/` folder contains:
 
 | File | Paper reference |
 |------|-----------------|
-| `bert_attention_pipeline.ipynb` | **Appendix A** features + the BERT Attn rows of **Tables 4, 5, 11**; **Tab 8** (LOSO-Gemini errors); **Tab 19** (calibration); **Tabs 20–24** (App E artifacts); **Tabs 29–31** (App G); **Tab 32** (INLP). |
-| `gpt2_attention_pipeline.ipynb` | **Appendix A** features + the GPT-2 Attn rows of **Tables 4, 5, 11**; the GPT-2 row of **Tab 32** (INLP). |
+| `bert_attention_pipeline.ipynb` | **Appendix A** features; **Tab 2**; the TF-IDF, FT-BERT and Attn-BERT rows of **Tabs 4, 5, 17**; **Tab 8** and **Tabs 29–31** (App H); **Tab 19** and **Fig 2** (App E); **Tab 7** and **Tabs 20–24** (App F, cell 33); **Tab 32** (App I). |
+| `gpt2_attention_pipeline.ipynb` | **Appendix A** features; the GPT-2 Attn rows of **Tabs 4 and 17**; the GPT-2 rows of **Tab 32** (App I). |
 
 Both notebooks depend on the Python modules in [`feature_extraction_code/`](#feature_extraction_code).
 
@@ -141,8 +192,8 @@ Both notebooks depend on the Python modules in [`feature_extraction_code/`](#fea
 
 | File | Paper reference |
 |------|-----------------|
-| `bert_text_baseline.ipynb` | **Section 3.2 → Tab 4** (FT BERT row), **Tab 11** (FT BERT LOSO). |
-| `gpt2_text_baseline.ipynb` | **Section 3.2 → Tab 4** (FT GPT-2 row), **Tab 11** (FT GPT-2 LOSO). |
+| `bert_text_baseline.ipynb` | Trains the FT BERT rows of **Tabs 4, 5, 17** (no saved output; the values are printed in `02_attention_pipeline/bert_attention_pipeline.ipynb`, cell 40). |
+| `gpt2_text_baseline.ipynb` | FT GPT-2 rows of **Tabs 4 and 17** (cells 7–8). |
 | `source_only_baseline.ipynb` | Development notebook for the **source-only majority baseline** on the earlier pre-v9 merges: the diagnostic that first quantified how much of the label was recoverable from the source alone, and that showed it dropping as counterfactuals were added. Kept for provenance; the v9 source-only numbers in **Tabs 4 and 27** are computed inside the training notebooks. |
 
 Both fine-tuning notebooks are multi-seed (`BASELINE_SEEDS = [1, 2, 3, 4, 5]`, pair-aware `GroupShuffleSplit`).
@@ -153,7 +204,7 @@ Both fine-tuning notebooks are multi-seed (`BASELINE_SEEDS = [1, 2, 3, 4, 5]`, p
 
 | File | Paper reference |
 |------|-----------------|
-| `bert_bias_classifier.ipynb` | Single-seed Attn-BERT bias classifier. **Only the TF-IDF + LogReg lexical baseline row of Tab 4 / Tab 11 comes from here** (via `scientific_utils.run_tfidf_baseline`). The Attn-BERT rows themselves are produced by `02_attention_pipeline/bert_attention_pipeline.ipynb` (multi-seed). |
+| `bert_bias_classifier.ipynb` | Single-seed Attn-BERT bias classifier, used during development. It runs its own split and its own TF-IDF comparison (`scientific_utils.run_tfidf_baseline`), and **does not produce any number in the paper**. The paper's TF-IDF row comes from `02_attention_pipeline/bert_attention_pipeline.ipynb` (cells 38–39) and the Attn-BERT rows from the same notebook. |
 | `gpt2_bias_classifier.ipynb` | Same role for GPT-2: only the lexical baseline contribution; the Attn-GPT-2 multi-seed numbers are produced by `02_attention_pipeline/gpt2_attention_pipeline.ipynb`. |
 
 Both also carry the **regression mini-suites** (16 control sentences + 8 hard negatives) used as sanity checks during development.
@@ -164,12 +215,15 @@ Both also carry the **regression mini-suites** (16 control sentences + 8 hard ne
 
 | File | Paper reference |
 |------|-----------------|
-| `bert_edited_data_ablation.ipynb` | **Section 5 → Tab 6** (variants A / B / C / D over 5 seeds). Also saves the per-instance predictions `preds_<variant>_seed_<N>.csv` consumed by the App F analysis. |
-| `tables/export_source_maps.py` | Data prep for App F: produces `v9_source_map.csv` and the per-seed `test_source_seed_<N>.csv` files (both checked in under `tables/`). |
+| `bert_edited_data_ablation.ipynb` | **Section 6 → Tab 6** (variants A / B / C / D over 5 seeds) and **Tab 28**, cell 9. Also saves the per-instance predictions `preds_<variant>_seed_<N>.csv` consumed by the App G analysis and by Tab 40. |
+| `predictions/preds_<variant>_seed_<N>.csv` | The 20 per-instance prediction files (variants `A_real_only`, `B_real_plus_str`, `C_all_edited`, `D_no_gemini_cfs` × seeds 1–5). Columns: `instance_id, true_label, predicted_prob`. Each file covers exactly the test split of its seed (1 277 to 1 290 instances). Written by cells 12–14 of `bert_edited_data_ablation.ipynb`, together with `manifest.csv` (per-file test size, accuracy and F1). |
+| `tables/export_source_maps.py` | Data prep for App G: produces `v9_source_map.csv` and the per-seed `test_source_seed_<N>.csv` files (both checked in under `tables/`). |
+| `tables/ablation_stats.py` | **Tabs 25, 26, 28**: paired permutation tests, Fisher combination and bootstrap CIs on the per-instance predictions, following Appendix G. |
+| `tables/per_seed_tables.py` | **Tab 27** (and the source-only row of Tab 4) and **Tab 40**. |
 
-> 📊 **Tabs 25, 26, 28 are produced from the files in `06_edited_data_ablation/tables/`**, not by the parent notebook: the notebook saves the per-instance predictions, `export_source_maps.py` builds the source maps, and the paired-permutation / bootstrap analysis runs on top of both.
+> 📊 **Tabs 25 and 26 are produced from the per-instance predictions plus the source maps**, not by the parent notebook: the notebook saves `predictions/`, `export_source_maps.py` builds the source maps in `tables/`, and the paired-permutation / bootstrap analysis runs on top of both.
 >
-> ⚠️ The analysis script itself is **not currently checked in**: only its inputs (`v9_source_map.csv`, `test_source_per_seed/`). Add it before the camera-ready so App F is reproducible end to end.
+> ⚠️ The analysis script itself is **not yet checked in**; both of its inputs are. It will be added so App G is reproducible end to end.
 
 ---
 
@@ -177,8 +231,13 @@ Both also carry the **regression mini-suites** (16 control sentences + 8 hard ne
 
 | File | Paper reference |
 |------|-----------------|
-| `bert_heldout_pairs_eval.ipynb` | **Section 6.2 + App D → Tab 18** (counterfactual discrimination on 983 held-out pairs: PairAcc 78.2 %, DirAcc 97.3 %). |
-| `bert_crows_pairs_eval.ipynb` | **Appendix H → Tabs 33–37** (CrowS-Pairs zero-shot transfer, anti-stereo robustness, BERT-base PLL independence). |
+| `bert_heldout_pairs_eval.ipynb` | Per-source breakdown of held-out counterfactual discrimination for the fine-tuned BERT. It uses the main fixed split, whose test side leaves 790 held-out pairs. The **983-pair figures of Tab 18** (PairAcc 78.2 %, DirAcc 97.3 %, MeanGap 0.705) come from `03_source_domain_diagnosis/bert_source_diagnosis.ipynb`, cell 23. |
+| `bert_crows_pairs_eval.ipynb` | **Appendix J → Tabs 33–37** (CrowS-Pairs zero-shot transfer, anti-stereo robustness, BERT-base PLL independence). |
+| `crows_pairs/audit/` | LLM audit of all 3 016 CrowS-Pairs sentences with Prompt 1: input, verdicts (1 457 `CORRECT`, 800 `WEAK_BIAS`, 759 `MISLABELED`) and the script that produced them. |
+| `crows_pairs/outputs/` | Per-pair, per-seed, per-category and PLL outputs of `bert_crows_pairs_eval.ipynb`. |
+| `crows_pairs/crows_audit_tables.py` | **Tabs 33, 38, 39**, built from the audit verdicts and the per-pair outputs. |
+
+> ⚖️ Everything under `crows_pairs/` is **CC BY-SA 4.0**, inherited from CrowS-Pairs. See [`crows_pairs/README.md`](07_external_evaluations/crows_pairs/README.md).
 
 ---
 
@@ -202,7 +261,7 @@ feature_extraction_code/
 Functions imported by the notebooks:
 
 - `extract_features_for_sentence`: builds the 3 238-dim vector; used by `02_attention_pipeline/*`
-- `run_tfidf_baseline`: the lexical TF-IDF + LogReg baseline (Tab 4 row); used by `05_bias_classifiers/*`
+- `run_tfidf_baseline`: a TF-IDF + LogReg comparison used by `05_bias_classifiers/*` during development (the paper's TF-IDF row uses a different configuration, in `02_attention_pipeline/bert_attention_pipeline.ipynb`, cell 38)
 - `bootstrap_confidence_intervals`, `compare_with_baseline`, `analyze_error_types`, `analyze_bias_threshold`, `plot_model_calibration`, `analyze_feature_stability`: utilities for `05_bias_classifiers/*`
 
 External dependencies: `numpy`, `torch`, `transformers`, `scikit-learn`, `pandas`.
@@ -231,109 +290,98 @@ Exact Gemini prompts used in the audit and counterfactual pipeline.
 
 | File | Role |
 |------|------|
-| `1-Prompt biased-neutral.txt` | **Prompt 1**: audit (`CORRECT` / `MISLABELED` / `WEAK_BIAS`) |
-| `2-Prompt neutral-biased.txt` | **Prompt 2**: repair (`FLIP` / `STRENGTHEN`) |
-| `3-Prompt Audit biased-neutral.txt` | **Prompt 3**: biased → neutral counterfactual |
-| `4-Prompt Audit neutral-biased.txt` | **Prompt 4**: neutral → biased counterfactual |
+| `Prompt1-Audit.txt` | **Prompt 1**: label audit (`CORRECT` / `MISLABELED` / `WEAK_BIAS`). Used verbatim by `gemini_audit.ipynb` (cell 9), by the Claude re-audit and by `07_external_evaluations/crows_pairs/audit/run_crows_pairs_audit.py` |
+| `Prompt2-Repair.txt` | **Prompt 2**: repair (`FLIP` / `STRENGTHEN`). Used by `gemini_audit.ipynb` (cell 18) |
+| `1-Prompt biased-neutral.txt` | **Prompt 3**: biased → neutral counterfactual generation (`generate_counterfactuals.ipynb`) |
+| `2-Prompt neutral-biased.txt` | **Prompt 4**: neutral → biased counterfactual generation |
+| `3-Prompt Audit biased-neutral.txt` | Acceptance rules for Prompt 3 outputs (`ACCEPT` / `REJECT`, the double-ACCEPT filter) |
+| `4-Prompt Audit neutral-biased.txt` | Acceptance rules for Prompt 4 outputs |
 
 ---
 
 ## Table → notebook map
 
+Numbering follows the **camera-ready** version (Tables 1–40, Figures 1–2, Appendices A–M).
+"Cell N" is the 0-based index of the cell in the notebook (the first cell is cell 0).
+
+Status legend:
+**printed**: the number appears in the saved output of that cell.
+**recompute**: the code or data is in the repository and reproduces the number exactly, but the output was not saved.
+**script**: a standalone script in this repository regenerates the table and checks it against the values in the paper.
+
+### Evaluation splits
+
+Three splits appear in the paper. They come from the same procedure (`GroupShuffleSplit` by `pair_id`, 25 % test), differing in `random_state` and in whether the test side is restricted to `edit_type == original`:
+
+| Split | Train / test / held-out CFs | Used by |
+|---|---|---|
+| Diagnostic split (`random_state=42`, no originals-only filter), `03_source_domain_diagnosis/` | 7 703 / 1 615 / 986 | Tab 18 |
+| Main fixed split (`random_state=42`, originals-only test), `bert_bias_classifier_v9_split.npz` | 8 229 (6 580 fit + 1 649 val) / 1 282 / 793 | Tabs 4, 5, 17, 19; Fig 2 |
+| Per-seed splits (`random_state` = 1…5, originals-only test), `pair_aware_split` in `06_edited_data_ablation/` | ≈ 8 240 / 1 277–1 290 / 773–804 | Tabs 6, 25–28, 40; source-only row of Tab 4 |
+
 ### Body
 
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **1** (`tab:curation`)            | Curation summary for dataset v9 | `01_data_audit_counterfactuals/gemini_audit.ipynb` (verdict + repair counts; manual review pass tallied outside the notebook) |
-| **2** (`tab:sourcecomp`)          | Final source-label composition for v9 | Computed from `bias_sentences_v9.json`; the per-source × per-label breakdown is printed in `03_source_domain_diagnosis/bert_source_diagnosis.ipynb` (cell 6) |
-| **3** (`tab:evolution`)           | Evolution of the dataset across versions (v1 / v2 / v9) | v9 number from `03_source_domain_diagnosis/bert_source_diagnosis.ipynb`; v1 / v2 numbers are historical (from earlier development runs that are no longer in the pack) |
-| **4** (`tab:mainresults`)         | Main results across model families (5 seeds) | **Composite**: <br>• Source-only majority on each seed's test split: computed inside each training notebook <br>• TF-IDF + LogReg: `scientific_utils.run_tfidf_baseline` called inside `05_bias_classifiers/bert_bias_classifier.ipynb` <br>• FT BERT / GPT-2: `04_text_baselines/{bert,gpt2}_text_baseline.ipynb` <br>• Attn BERT / GPT-2 (Orig + Resid): `02_attention_pipeline/{bert,gpt2}_attention_pipeline.ipynb` |
-| **5** (`tab:loso-main`)           | LOSO F1 by source for representative models | Subset of Tab 4 LOSO column (same notebooks) |
-| **6** (`tab:ablation`)            | Edited-data ablation A / B / C / D (5 seeds) | `06_edited_data_ablation/bert_edited_data_ablation.ipynb` |
-| **7** (`tab:artifacts`)           | Summary of edited-text artifact analysis | `02_attention_pipeline/bert_attention_pipeline.ipynb` (App E section, near the end) |
-| **8** (`tab:loso_gemini_errors`)  | Attn-BERT LOSO-Gemini error profile | `02_attention_pipeline/bert_attention_pipeline.ipynb` (LOSO-Gemini error analysis cells) |
+| Table | Content | Source | Status |
+|:-----:|---------|--------|--------|
+| **1** | Curation summary | `01_data_audit_counterfactuals/gemini_audit.ipynb`, cells 12–15 (pass 1 and repair); final roles from `datasets/bias_sentences_v9.json`. The second audit pass (10 144 / 272) and the manual review (160 corrected, 112 removed) were done outside the notebook. | printed / partly manual |
+| **2** | Final source–label composition | `02_attention_pipeline/bert_attention_pipeline.ipynb`, cell 36 | printed |
+| **3** | Source-only baseline before / after the audit | v9 value as in Tab 2; the v1 / v2 values are historical and not reproducible from this pack | historical |
+| **4** | Main results | **Composite.** Source-only row: mean of Tab 27. TF-IDF: `02_…/bert_attention_pipeline.ipynb` cell 38. FT BERT / GPT-2: trained in `04_text_baselines/{bert,gpt2}_text_baseline.ipynb` (the GPT-2 notebook prints them in cells 7–8; the BERT notebook has no saved output, its numbers are printed in the consolidated table of `bert_attention_pipeline.ipynb` cell 40). Attention rows: `02_…/bert_attention_pipeline.ipynb` cells 30, 40 and `gpt2_attention_pipeline.ipynb` cells 44–45 | printed |
+| **5** | LOSO F1 by source | TF-IDF: `bert_attention_pipeline.ipynb` cell 39; FT-BERT and Attn-BERT: `bert_attention_pipeline.ipynb` cell 40 (consolidated table) | printed |
+| **6** | Edited-data ablation A–D | `06_edited_data_ablation/bert_edited_data_ablation.ipynb`, cell 9 | printed |
+| **7** | Artifact summary | `bert_attention_pipeline.ipynb`, cell 33 (see Tabs 20–24) | recompute |
+| **8** | LOSO-Gemini error profile | `bert_attention_pipeline.ipynb`, cell 31 (the ≥ 15-token row sums two length bins) | printed |
 
-### Appendix A: Attention-Derived Features
+### Appendices
 
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **9** (`tab:attn-features`) | Attention-derived feature groups per sentence | Documentation only; counts come from the implementation in `feature_extraction_code/attention/bias/feature_extraction_notebooks.py`, exercised by `02_attention_pipeline/{bert,gpt2}_attention_pipeline.ipynb` |
+| Table | Appendix | Content | Source | Status |
+|:-----:|:--------:|---------|--------|--------|
+| **9** | A | Attention-derived feature groups | `feature_extraction_code/attention/bias/feature_extraction_notebooks.py` (3 238 features) | documentation |
+| **10** | C | Human vs Prompt 1 confusion matrix | `01_data_audit_counterfactuals/human_audit_data/human_vs_prompt1_matrix.py` (κ = 0.865 also printed in `claude_label_audit.ipynb`, cell 22) | script |
+| **11** | C | Pairwise Cohen's κ | `claude_label_audit.ipynb`, cell 22 | printed |
+| **12** | C | Gemini vs Claude (3-class) | `claude_label_audit.ipynb`, cell 17 (columns in alphabetical order) | printed |
+| **13** | C | Gemini vs Claude (binary) | collapsed from Tab 12 | printed |
+| **14** | C | Human vs Claude | `claude_label_audit.ipynb`, cells 14–15 (heatmap + classification report) | printed |
+| **15** | C | Three-way agreement patterns | `claude_label_audit.ipynb`, cell 20 | printed |
+| **16** | C | Auditor–human κ by source | `claude_label_audit.ipynb`, cell 24 | printed |
+| **17** | D | Cross-source robustness, all models | Composite, as Tab 4 (TF-IDF: `bert_attention_pipeline.ipynb` cells 38–39) | printed |
+| **18** | E | Held-out counterfactual discrimination (983 pairs) | `03_source_domain_diagnosis/bert_source_diagnosis.ipynb`, cell 23 | printed |
+| **19**, **Fig 2** | E | Calibration and reliability diagram | `bert_attention_pipeline.ipynb`, cells 58–59 | printed |
+| **20** | F | Length and lexical diversity | `bert_attention_pipeline.ipynb`, cell 33 | recompute |
+| **21** | F | Perplexity under three LMs | `bert_attention_pipeline.ipynb`, cell 33 (section 4; needs GPT-2, GPT-2 Medium, GPT-Neo) | recompute (GPU recommended) |
+| **22–24** | F | Real-vs-edited classifier (global, within source, Gemini decomposition) | `bert_attention_pipeline.ipynb`, cell 33 | recompute |
+| **25–26** | G | Paired permutation tests and bootstrap CIs | `06_edited_data_ablation/tables/ablation_stats.py`, on the predictions written by `bert_edited_data_ablation.ipynb` cells 12–14 | script (re-implementation) |
+| **27** | G | Per-seed source-only baseline | `06_edited_data_ablation/tables/per_seed_tables.py` | script |
+| **28** | G | Full test vs no-Gemini test | `06_edited_data_ablation/bert_edited_data_ablation.ipynb`, cell 9 | printed |
+| **29–31** | H | Formulation rules, errors by topic, marker rates | `bert_attention_pipeline.ipynb`, cell 31 | printed |
+| **32** | I | Residualization vs INLP | `bert_attention_pipeline.ipynb` cells 28–29 and `gpt2_attention_pipeline.ipynb` cells 27–28 (Original rows, BERT Linear row); the INLP cells (26 and 25) have no saved output and the GPT-2 Linear source accuracy (0.348) is not printed | printed / recompute |
+| **33** | J | CrowS-Pairs predicted-class decomposition | `07_external_evaluations/bert_crows_pairs_eval.ipynb`, cells 21–22; `crows_pairs/crows_audit_tables.py` | printed / script |
+| **34** | J | CrowS-Pairs pair metrics | `bert_crows_pairs_eval.ipynb`, cell 32 | printed |
+| **35** | J | Pair metrics per category | `bert_crows_pairs_eval.ipynb`, cell 28 | printed |
+| **36** | J | Anti-stereotype robustness | `bert_crows_pairs_eval.ipynb`, cells 30, 32 | printed |
+| **37** | J | Independence from BERT-base PLL (Nangia et al. scoring) | `bert_crows_pairs_eval.ipynb`, cell 36 (stereotype score 60.48 %, writes `crows_pairs_bert_mlm_nangia.csv`) and cell 40 (Pearson +0.040, Spearman −0.002). Cells 34 and 38 are the full-sentence PLL variant, not used in the paper | printed |
+| **38–39** | L | Label audit of CrowS-Pairs | `07_external_evaluations/crows_pairs/crows_audit_tables.py` | script |
+| **40** | M | Fine-tuned BERT by demographic axis | `06_edited_data_ablation/tables/per_seed_tables.py` | script |
 
-### Appendix B: Detailed LOSO Results
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **11** (`tab:loso_per_source`) | Full per-source LOSO across all evaluated models | **Composite**: <br>• TF-IDF + LogReg: `scientific_utils.run_tfidf_baseline` inside `05_bias_classifiers/bert_bias_classifier.ipynb` <br>• FT BERT / GPT-2: `04_text_baselines/` <br>• Attn BERT / GPT-2 (Orig + Resid): `02_attention_pipeline/{bert,gpt2}_attention_pipeline.ipynb` |
-
-### Appendix C: Inter-rater Agreement
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **10** (`tab:confmat_prompt1`)         | Human vs. Prompt 1 (Gemini) confusion matrix | `01_data_audit_counterfactuals/claude_label_audit.ipynb` (human verdicts from `human_audit_tools/`) |
-| **12** (`tab:three_way`)               | Pairwise Cohen's κ (human / Gemini / Claude), 3-class + binary | `01_data_audit_counterfactuals/claude_label_audit.ipynb` |
-| **13** (`tab:cm_gemini_claude_3way`)   | Gemini vs Claude confusion matrix (3-class) | `01_data_audit_counterfactuals/claude_label_audit.ipynb` |
-| **14** (`tab:cm_gemini_claude_binary`) | Gemini vs Claude confusion matrix (binary) | `01_data_audit_counterfactuals/claude_label_audit.ipynb` |
-| **15** (`tab:cm_human_claude_3way`)    | Human vs Claude confusion matrix (3-class) | `01_data_audit_counterfactuals/claude_label_audit.ipynb` |
-| **16** (`tab:cross-patterns`)          | Three-way agreement pattern distribution | `01_data_audit_counterfactuals/claude_label_audit.ipynb` |
-| **17** (`tab:cross-by-source`)         | Auditor-human κ stratified by source | `01_data_audit_counterfactuals/claude_label_audit.ipynb` |
-
-### Appendix D: Calibration Details
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **18** (`tab:pairwise`)     | Held-out counterfactual discrimination (PairAcc / DirAcc / MeanGap) | `07_external_evaluations/bert_heldout_pairs_eval.ipynb` |
-| **19** (`tab:calibration`)  | Calibration of the main fine-tuned BERT (Uncalibrated / Platt / Temperature) | `02_attention_pipeline/bert_attention_pipeline.ipynb` (the multi-seed calibration section) |
-
-### Appendix E: Edited-Text Artifact Analysis
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **20** (`tab:art-length`)   | Length and lexical diversity of real vs. edited | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-| **21** (`tab:art-ppl`)      | Median perplexity under GPT-2 / GPT-2 Medium / GPT-Neo | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-| **22** (`tab:art-cls`)      | Real-vs-edited classifier (global + within-source) | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-| **23** (`tab:art-gemini`)   | Gemini real-vs-edited decomposition by edit type | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-| **24** (`tab:art-strat`)    | Gemini real-vs-edited stratified by gold label | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-
-### Appendix F: Statistical Analysis of the Ablation
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **25** (`tab:ablation-stats-summary`)  | Paired permutation tests / bootstrap CIs summary | `06_edited_data_ablation/tables/` (analysis on top of `preds_<variant>_seed_<N>.csv` + `test_source_seed_<N>.csv`) |
-| **26** (`tab:ablation-stats-per-seed`) | Per-seed paired deltas with within-seed p-values | `06_edited_data_ablation/tables/` (same analysis as Tab 25) |
-| **27** (`tab:sourceonly_test`)         | Per-seed source-only majority baseline on the main test split | Computed inside each training notebook for its seed's test split (`04_text_baselines`, `05_bias_classifiers`, `06_edited_data_ablation`); the **77.6 % ± 1.8 %** mean is the aggregate of those per-seed numbers |
-| **28** (`tab:exclude_gemini`)          | Per-variant Accuracy / F1 on full vs. no-Gemini test | `06_edited_data_ablation/tables/` (same analysis as Tabs 25–26; the no-Gemini test mask is built from `test_source_seed_<N>.csv`) |
-
-### Appendix G: LOSO Error Analysis for Gemini
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **29** (`tab:formulation_rules`)        | Hierarchical formulation-type rules | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-| **30** (`tab:loso_gemini_topics_full`)  | Errors by topic (top 12) | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-| **31** (`tab:loso_gemini_marker_rates`) | Rate of linguistic markers inside each error class | `02_attention_pipeline/bert_attention_pipeline.ipynb` |
-
-### Appendix H: CrowS-Pairs Transfer
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **33** (`tab:crowspairs-decomp`)       | CrowS-Pairs predicted-class decomposition | `07_external_evaluations/bert_crows_pairs_eval.ipynb` |
-| **34** (`tab:crowspairs-main`)         | CrowS-Pairs pair metrics (raw + corrected mapping) | `07_external_evaluations/bert_crows_pairs_eval.ipynb` |
-| **35** (`tab:crowspairs-categories`)   | CrowS-Pairs per-category metrics | `07_external_evaluations/bert_crows_pairs_eval.ipynb` |
-| **36** (`tab:crowspairs-antistereo`)   | CrowS-Pairs anti-stereotype robustness | `07_external_evaluations/bert_crows_pairs_eval.ipynb` |
-| **37** (`tab:crowspairs-independence`) | Per-pair independence vs BERT-base PLL preferences | `07_external_evaluations/bert_crows_pairs_eval.ipynb` |
-
-### Appendix I: Residualization vs INLP
-
-| Table | Caption | Produced by |
-|:-----:|---------|-------------|
-| **32** (`tab:inlp`) | Linear residualization vs INLP on attention-derived features | `02_attention_pipeline/bert_attention_pipeline.ipynb` (BERT row) + `02_attention_pipeline/gpt2_attention_pipeline.ipynb` (GPT-2 row) |
+Figure 1 is a diagram and is not generated by code.
 
 ---
 
 ## Citation
 
-The paper has been accepted at AACL-IJCNLP 2026 (Main Conference) but is **not published yet**, so there is no citable reference yet. We are waiting for the proceedings to go online; the official ACL Anthology entry (anthology ID, pages, publisher and full author list) and a ready-to-copy BibTeX block will be added here as soon as it exists.
+**Citation to be added.** The paper has been accepted at AACL-IJCNLP 2026 (Main Conference) but the proceedings are not out yet. The final bibliographic entry (ACL Anthology ID, pages, publisher) will replace the one below as soon as they are published.
 
-Until then, please cite the work as *to appear* at AACL-IJCNLP 2026.
+Until then, please cite the OpenReview record:
+
+```bibtex
+@inproceedings{pinto2026auditing,
+  title     = {Auditing Bias Detection Under Source Shift: A Source-Aware Benchmark and Evaluation Protocol},
+  author    = {Pinto, Ana and Figueira, {\'A}lvaro},
+  booktitle = {The 5th Asia-Pacific Chapter of the Association for Computational Linguistics {\&} the 15th International Joint Conference on Natural Language Processing},
+  year      = {2026},
+  url       = {https://openreview.net/forum?id=1L3GSyq3I1}
+}
+```
 
 ---
 
@@ -341,5 +389,6 @@ Until then, please cite the work as *to appear* at AACL-IJCNLP 2026.
 
 - **Absolute paths.** A handful of cells still hard-code `C:\Users\...\project`. Rewrite them for your environment before running (see [Quick start](#quick-start)).
 - **`attention_app/` in saved paths.** Some notebooks read and write model artifacts under `<root>/attention_app/bias/models/`. That is an output folder in the parent project, not the Python package: the package to put on your path is `feature_extraction_code/attention/`.
-- **App F analysis script** is not in the repository, only its inputs. See `06_edited_data_ablation/`.
+- **App G tests are a re-implementation.** The original analysis script for Tabs 25–26 is not available; `ablation_stats.py` follows the procedure of Appendix G on the released predictions. Deterministic values match the paper; permutation p-values and bootstrap CIs match up to Monte Carlo noise (about 0.01 and 0.001).
+- **Outputs not saved.** The artefact analysis (cell 33 of `bert_attention_pipeline.ipynb`, Tabs 7 and 20–24) and the INLP cells (cell 26 of the BERT notebook, cell 25 of the GPT-2 notebook, Tab 32) were saved without outputs. Re-running cell 33 reproduces Tabs 7, 20 and 22–24 exactly; Tab 21 additionally needs three language models.
 - **`04_text_baselines/source_only_baseline.ipynb`** reads the older `dataset/v2/*.csv` merges, which are not shipped here; it is kept as provenance for the confounding diagnostic, not as a v9 result.

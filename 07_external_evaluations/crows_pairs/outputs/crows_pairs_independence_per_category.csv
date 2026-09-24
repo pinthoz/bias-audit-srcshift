@@ -1,0 +1,10 @@
+bias_type,DirAcc_ours,StereoScore_BERT_base
+age,0.554,0.609
+disability,0.7,0.783
+gender,0.543,0.573
+nationality,0.654,0.465
+physical-appearance,0.578,0.698
+race-color,0.577,0.597
+religion,0.707,0.733
+sexual-orientation,0.64,0.774
+socioeconomic,0.651,0.587

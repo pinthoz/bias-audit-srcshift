@@ -1,0 +1,12 @@
+,PairAcc,PairAcc,DirAcc,DirAcc,MeanGap,MeanGap,n_pairs,scope
+,mean,std,mean,std,mean,std,,
+bias_type,,,,,,,,
+age,0.0805,0.0422,0.554,0.0881,0.0321,0.0376,87,in-scope
+disability,0.1367,0.0139,0.7,0.0677,0.082,0.0116,60,borderline
+gender,0.0641,0.0068,0.5427,0.027,0.0205,0.0072,262,in-scope
+nationality,0.0855,0.0254,0.6541,0.0367,0.0571,0.0224,159,in-scope
+physical-appearance,0.127,0.0372,0.5778,0.0429,0.0667,0.0243,63,borderline
+race-color,0.0523,0.0131,0.5771,0.044,0.0273,0.01,516,in-scope
+religion,0.0971,0.0444,0.7067,0.0389,0.0652,0.0309,105,in-scope
+sexual-orientation,0.1357,0.0391,0.6405,0.0856,0.1046,0.0374,84,in-scope
+socioeconomic,0.1419,0.0227,0.6512,0.0361,0.0884,0.0223,172,in-scope
